@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TapeScope — X Layer TapeOut Analytics Terminal</title>
+<meta name="description" content="Live read-only analytics terminal for the TapeOut protocol on X Layer mainnet: processors, circuits, containers and DeWEB on-chain websites. No wallet, no transactions — every number is read straight from the chain.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">◈</span>
+    <div>
+      <h1>TapeScope</h1>
+      <p class="tagline">X Layer · TapeOut Analytics Terminal — read-only, on-chain, no wallet</p>
+    </div>
+  </div>
+  <div class="netstatus" id="netstatus">
+    <span class="dot pending" id="netdot"></span>
+    <span id="nettext">Connecting to X Layer mainnet…</span>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab active" data-tab="overview" role="tab">Overview</button>
+  <button class="tab" data-tab="processors" role="tab">Processors <span class="count" id="tabProcCount"></span></button>
+  <button class="tab" data-tab="sites" role="tab">DeWEB Sites <span class="count" id="tabSiteCount"></span></button>
+  <button class="tab" data-tab="lookup" role="tab">Circuit Lookup</button>
+  <button class="tab" data-tab="method" role="tab">Method &amp; Sources</button>
+</nav>
+
+<main>
+  <!-- ============ OVERVIEW ============ -->
+  <section class="panel active" id="panel-overview">
+    <div class="cards" id="statCards">
+      <div class="card"><div class="card-label">Processors <span class="live-badge">LIVE</span></div><div class="card-value" id="statProcessors">…</div><div class="card-sub">factory cpuCount() on X Layer</div></div>
+      <div class="card"><div class="card-label">Circuits <span class="snap-badge">SNAPSHOT</span></div><div class="card-value" id="statCircuits">…</div><div class="card-sub">sum of per-processor counts, re-countable live per row</div></div>
+      <div class="card"><div class="card-label">Opened containers <span class="snap-badge">SNAPSHOT</span></div><div class="card-value" id="statOpened">…</div><div class="card-sub">circuits with an activated ERC-6551 container</div></div>
+      <div class="card"><div class="card-label">DeWEB sites <span class="snap-badge">SNAPSHOT</span></div><div class="card-value" id="statSites">…</div><div class="card-sub">containers holding ≥1 file in SiteRegistry</div></div>
+      <div class="card"><div class="card-label">On-chain files <span class="snap-badge">SNAPSHOT</span></div><div class="card-value" id="statFiles">…</div><div class="card-sub">across all DeWEB sites</div></div>
+      <div class="card"><div class="card-label">Bytes stored on-chain <span class="snap-badge">SNAPSHOT</span></div><div class="card-value" id="statBytes">…</div><div class="card-sub">website bytes in SiteRegistry chunks</div></div>
+    </div>
+    <p class="snap-note" id="snapNote">Loading snapshot…</p>
+
+    <h2>Protocol health <span class="live-badge">LIVE</span></h2>
+    <p class="hint">Every contract is checked live right now: code present, and — for the UUPS proxies — the ERC-1967 implementation slot compared against the implementation addresses pinned by the official TapeKit kernel.</p>
+    <table class="table" id="healthTable">
+      <thead><tr><th>Contract</th><th>Address</th><th>Code</th><th>Implementation (ERC-1967 slot)</th><th>Pinned?</th></tr></thead>
+      <tbody><tr><td colspan="5" class="muted">Checking contracts live…</td></tr></tbody>
+    </table>
+
+    <h2>Largest DeWEB sites <span class="snap-badge">SNAPSHOT</span></h2>
+    <table class="table" id="topSitesTable">
+      <thead><tr><th>Site</th><th>Processor</th><th>Files</th><th>Bytes</th><th>Container OKB</th><th></th></tr></thead>
+      <tbody><tr><td colspan="6" class="muted">Loading snapshot…</td></tr></tbody>
+    </table>
+  </section>
+
+  <!-- ============ PROCESSORS ============ -->
+  <section class="panel" id="panel-processors">
+    <div class="toolbar">
+      <input type="search" id="procSearch" placeholder="Search by name, #number or 0x address…" aria-label="Search processors">
+      <select id="procSort" aria-label="Sort processors">
+        <option value="circuits-desc">Most circuits first</option>
+        <option value="index-asc">Processor # ascending</option>
+        <option value="index-desc">Processor # descending</option>
+        <option value="name-asc">Name A–Z</option>
+      </select>
+      <button id="procRefresh" class="btn">↻ Re-read live from factory</button>
+    </div>
+    <p class="hint" id="procHint"></p>
+    <table class="table" id="procTable">
+      <thead><tr><th>#</th><th>Name</th><th>Processor contract</th><th>Circuits</th><th>Sites</th><th>Live recount</th></tr></thead>
+      <tbody><tr><td colspan="6" class="muted">Loading snapshot…</td></tr></tbody>
+    </table>
+    <p class="hint">Circuit counts come from the snapshot (ownerOf probing). “Recount” re-runs the same probe live against the chain for that processor and updates the row. Processors are append-only: re-reading the factory picks up any processor created after the snapshot.</p>
+  </section>
+
+  <!-- ============ SITES ============ -->
+  <section class="panel" id="panel-sites">
+    <div class="toolbar">
+      <input type="search" id="siteSearch" placeholder="Search by .tape name, processor or container…" aria-label="Search sites">
+      <select id="siteSort" aria-label="Sort sites">
+        <option value="bytes-desc">Largest first</option>
+        <option value="files-desc">Most files first</option>
+        <option value="name-asc">Name A–Z</option>
+      </select>
+    </div>
+    <p class="hint" id="siteHint"></p>
+    <div id="siteList" class="site-list"><p class="muted">Loading snapshot…</p></div>
+    <div id="siteDetail" class="site-detail" hidden>
+      <div class="detail-head">
+        <h3 id="detailTitle"></h3>
+        <button class="btn" id="detailClose">✕ Close</button>
+      </div>
+      <div id="detailMeta"></div>
+      <div class="detail-actions">
+        <button class="btn primary" id="btnVerifyLive">✓ Verify live on-chain</button>
+        <button class="btn" id="btnPreview">▸ Preview site from chain (SHA-256 verified)</button>
+        <a class="btn" id="btnGateway" target="_blank" rel="noopener">↗ Open via TapeKit gateway</a>
+      </div>
+      <div id="verifyOut" class="verify-out"></div>
+      <div id="previewWrap" class="preview-wrap" hidden>
+        <div class="preview-bar"><span id="previewStatus"></span><button class="btn small" id="btnPreviewClose">Close preview</button></div>
+        <iframe id="previewFrame" sandbox="allow-scripts" title="DeWEB site preview"></iframe>
+        <p class="hint">Preview renders bytes read live from SiteRegistry in a sandboxed iframe. Scripts inside run isolated from this page; the preview has no wallet access and cannot reach this origin.</p>
+      </div>
+      <h4>Files <span class="snap-badge">SNAPSHOT</span> <span id="fileCountNote"></span></h4>
+      <table class="table" id="fileTable">
+        <thead><tr><th>Path</th><th>Type</th><th>Size</th><th>SHA-256 (on-chain)</th><th>Updated</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ LOOKUP ============ -->
+  <section class="panel" id="panel-lookup">
+    <h2>Circuit lookup <span class="live-badge">LIVE</span></h2>
+    <p class="hint">Resolve any TapeOut circuit on X Layer straight from the chain — owner, container, open status, balance, on-chain website and name status. Nothing is cached here: every field is an <code>eth_call</code> made when you press Lookup.</p>
+    <form id="lookupForm" class="lookup-form">
+      <input type="text" id="lookupInput" placeholder="e.g. 1.2.231.tape  ·  #1@2.231  ·  1@2.231  ·  0x57e9…#1" autocomplete="off" spellcheck="false">
+      <button type="submit" class="btn primary">Lookup live</button>
+    </form>
+    <p class="hint">Accepted forms: <code>&lt;#ID&gt;.2.&lt;processor&gt;.tape</code> (X Layer area code is 2), <code>#&lt;id&gt;@2.&lt;processor&gt;</code>, or <code>&lt;processor contract&gt;#&lt;id&gt;</code>. Try <button class="linklike" data-try="1.2.231.tape">1.2.231.tape</button> (a live on-chain game) or <button class="linklike" data-try="1.2.0.tape">1.2.0.tape</button>.</p>
+    <div id="lookupOut"></div>
+  </section>
+
+  <!-- ============ METHOD ============ -->
+  <section class="panel" id="panel-method">
+    <h2>How TapeScope reads the chain</h2>
+    <div class="prose">
+      <p>TapeScope is a <strong>read-only</strong> analytics terminal. It never asks for a wallet, never signs anything and never sends a transaction. Everything it shows comes from public X Layer mainnet RPC endpoints (<code>rpc.xlayer.tech</code>, <code>xlayerrpc.okx.com</code>, <code>xlayer.drpc.org</code>) using plain <code>eth_call</code> / <code>eth_getCode</code> / <code>eth_getBalance</code>.</p>
+      <h3>Contracts (X Layer mainnet, chain 196)</h3>
+      <p>Addresses are taken from the official open-source TapeKit kernel (<a href="https://github.com/TapeOutProtocol/TapeKit" target="_blank" rel="noopener">TapeOutProtocol/TapeKit</a>, <code>kernel/src/config.js</code>, verified on-chain 2026-09-19) and re-checked live on every load:</p>
+      <ul>
+        <li>Processor factory — <code>0x1f09daefa827f02cbb40967cc91b259763760761</code> — <code>cpuCount()</code>, <code>cpuAt(i)</code>, <code>isCPU(addr)</code></li>
+        <li>Container opener — <code>0x536add8f30f03b69f6fbf29d425a816a0dc50106</code> — <code>accountOf(processor, id)</code>, <code>isOpened(processor, id)</code></li>
+        <li>SiteRegistry — <code>0xd6efb7adcc9c83dc4924ad56f6a8e4e969b9adb6</code> — <code>pathCount</code>, <code>pathsRange</code>, <code>fileInfo</code>, <code>read</code> / <code>readRange</code></li>
+        <li>DomainBinding — <code>0x68809fd2fb343aa57d0aeb7f33defe477c9666f9</code> — <code>monthlyFee()</code> (currently 0 OKB), <code>isContainerLive</code>, <code>containerPaidUntil</code></li>
+        <li>TapeSend hub — <code>0xe61a9c7213a6aa616c246a2b569e555b417b25ee</code> — same address on every chain (TAP-10)</li>
+      </ul>
+      <h3>Snapshot + live verification</h3>
+      <p>Counting every circuit and site needs thousands of calls, so the overview tables start from a <strong>timestamped snapshot</strong> (<code>data/snapshot.json</code>, built by <code>data/indexer.mjs</code> from live RPC reads only — no mocks, no third-party APIs). Every snapshot number is labelled <span class="snap-badge">SNAPSHOT</span> with its generation time and block. Anything labelled <span class="live-badge">LIVE</span> is read from the chain in your browser on load or on demand, and every snapshot row can be re-verified live (processor “Recount”, site “Verify live”, and the Lookup tab, which is live-only).</p>
+      <h3>Honest limitations</h3>
+      <ul>
+        <li><strong>Sequential token IDs assumed.</strong> Circuit counts probe <code>ownerOf(id)</code> with exponential + binary search, which assumes each processor mints token IDs 1, 2, 3… with no gaps. Spot-checked on sample processors at snapshot time; if a processor ever burns a low ID or mints out of order, its count could be off. The Lookup tab always checks a single circuit exactly.</li>
+        <li><strong>No log scans.</strong> Public X Layer RPCs cap <code>eth_getLogs</code> at ~100 blocks, so full-history event scans are impractical; sites are found by probing circuits directly instead. A site is therefore only listed if its container was opened and holds files at snapshot time.</li>
+        <li><strong>Custom .tape names.</strong> Name liveness is checked at container level (<code>isContainerLive</code>); individual custom names bound to a container are not enumerated.</li>
+        <li><strong>Snapshot staleness.</strong> Processors, circuits and sites created after the snapshot timestamp are not in the tables until the snapshot is rebuilt or the live re-read / lookup is used.</li>
+      </ul>
+      <h3>Built for the X Layer TapeOut Accelerate hackathon</h3>
+      <p>TapeScope was built for the X Layer TapeOut Accelerate (Build X series). It uses TapeOut's on-chain circuits, containers and DeWEB site data on X Layer. Source and indexer are open in this repository.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>TapeScope · read-only analytics for TapeOut on X Layer mainnet (chain 196) · No wallet · No transactions · Data: public X Layer RPC + timestamped snapshot, re-verifiable live. Not affiliated with OKX, X Layer or TapeOut.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
